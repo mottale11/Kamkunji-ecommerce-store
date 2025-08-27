@@ -1,32 +1,21 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { FaTrash, FaShoppingCart, FaSignInAlt, FaArrowRight, FaLock } from 'react-icons/fa';
 import { CartService, CartItem } from '@/services/cart';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { toast } from 'react-hot-toast';
 
-export default function CartPage() {
+function CartPageContent() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { supabase } = useSupabase();
-
-  // Check for successful login redirect
-  useEffect(() => {
-    const fromLogin = searchParams.get('fromLogin');
-    if (fromLogin === 'true') {
-      toast.success('Successfully signed in!');
-      // Remove the query parameter without refreshing
-      router.replace('/cart');
-    }
-  }, [searchParams, router]);
 
   // Check authentication status
   useEffect(() => {
@@ -51,30 +40,25 @@ export default function CartPage() {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
-
-  // Fetch cart items when authenticated
-  useEffect(() => {
-    if (isAuthenticated === null) return;
-    
-    const fetchCartItems = async () => {
+    // Load cart items
+    const loadCart = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
         const items = await CartService.getCartItemsWithDetails(supabase);
         setCartItems(items);
       } catch (err) {
-        console.error('Error fetching cart items:', err);
-        setError('Failed to load cart items. Please try again.');
-        toast.error('Failed to load cart items');
+        setError('Failed to load cart');
+        console.error('Error loading cart:', err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCartItems();
-  }, [isAuthenticated]);
+    loadCart();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [supabase]);
 
   const removeFromCart = async (id: string) => {
     try {
@@ -369,5 +353,17 @@ export default function CartPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <CartPageContent />
+    </Suspense>
   );
 }
