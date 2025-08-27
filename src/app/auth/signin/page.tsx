@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FaGoogle, FaGithub, FaArrowLeft } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useSupabase } from '@/components/SupabaseProvider';
 
-function SignInForm() {
+function SignInFormContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/';
   const { supabase } = useSupabase();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +27,7 @@ function SignInForm() {
       if (error) throw error;
       
       toast.success('Successfully signed in!');
-      router.push(redirectTo);
+      router.push('/');
     } catch (error: any) {
       toast.error(error.error_description || error.message);
     } finally {
@@ -42,7 +40,7 @@ function SignInForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       
@@ -177,14 +175,18 @@ function SignInForm() {
   );
 }
 
-export default function SignIn() {
+function SignInForm() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     }>
-      <SignInForm />
+      <SignInFormContent />
     </Suspense>
   );
+}
+
+export default function SignInPage() {
+  return <SignInForm />;
 }
