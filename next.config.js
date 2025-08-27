@@ -1,18 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable React strict mode
   reactStrictMode: true,
   
-  // TypeScript configuration
-  typescript: {
-    // Keep type checking enabled but ignore build errors for now
-    ignoreBuildErrors: true,
-  },
-  
-  // ESLint configuration
-  eslint: {
-    // Keep ESLint running but don't fail build on warnings
-    ignoreDuringBuilds: true,
+  // Enable React 19
+  experimental: {
+    reactRoot: true,
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
   },
   
   // Image optimization
@@ -52,8 +45,18 @@ const nextConfig = {
   output: 'standalone',
   
   // Enable server actions
-  experimental: {
-    serverActions: true,
+  serverActions: {
+    bodySizeLimit: '2mb',
+  },
+  
+  // Disable TypeScript type checking during build
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
+  // Disable ESLint during build
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 
