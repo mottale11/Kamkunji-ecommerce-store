@@ -1,4 +1,4 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerComponentClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { FaArrowLeft, FaCheck, FaTruck, FaTimes, FaPrint, FaEnvelope, FaEdit } from 'react-icons/fa';
 import Link from 'next/link';
