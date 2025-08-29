@@ -2,10 +2,22 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Enable React 19
+  // Fix workspace root warning
+  outputFileTracingRoot: process.cwd(),
+  
+  // Disable static generation
+  trailingSlash: true,
+  
+  // Force dynamic rendering
   experimental: {
-    reactRoot: true,
-    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+    serverActions: {
+      bodySizeLimit: '2mb'
+    },
+  },
+  
+  // Disable static optimization
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
   },
   
   // Image optimization
@@ -41,13 +53,8 @@ const nextConfig = {
     return config;
   },
   
-  // Enable static HTML export for Vercel
+  // Output configuration
   output: 'standalone',
-  
-  // Enable server actions
-  serverActions: {
-    bodySizeLimit: '2mb',
-  },
   
   // Disable TypeScript type checking during build
   typescript: {
@@ -58,6 +65,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
+  // Server external packages
+  serverExternalPackages: ['@supabase/supabase-js']
 };
 
 module.exports = nextConfig;

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import SupabaseProvider from "@/components/SupabaseProvider";
-import HydrationErrorBoundary from "@/components/HydrationErrorBoundary";
 import "@/utils/suppressWarnings"; // Import to suppress hydration warnings
 
 const inter = Inter({
@@ -32,11 +30,7 @@ export default function RootLayout({
         className={inter.className}
         suppressHydrationWarning={true}
       >
-        <SupabaseProvider>
-          <HydrationErrorBoundary>
-            {children}
-          </HydrationErrorBoundary>
-        </SupabaseProvider>
+        {children}
       </body>
     </html>
   );

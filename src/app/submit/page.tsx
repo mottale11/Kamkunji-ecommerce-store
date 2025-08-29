@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { FaUpload, FaTrash, FaSpinner, FaCamera, FaTag, FaMapMarkerAlt, FaPhone, FaInfoCircle } from 'react-icons/fa';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { getCategories } from '@/services/categories';
+import SupabaseWrapper from '@/components/SupabaseWrapper';
+
+// Prevent this page from being pre-rendered during build
+export const dynamic = 'force-dynamic';
 
 type ItemCondition = 'New' | 'Like New' | 'Good' | 'Fair' | 'Poor';
 
@@ -20,6 +24,14 @@ interface FormData {
 }
 
 export default function SubmitItemPage() {
+  return (
+    <SupabaseWrapper>
+      <SubmitItemPageContent />
+    </SupabaseWrapper>
+  );
+}
+
+function SubmitItemPageContent() {
   const router = useRouter();
   const { supabase } = useSupabase();
   const [formData, setFormData] = useState<FormData>({
@@ -41,19 +53,21 @@ export default function SubmitItemPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadCategories() {
-      try {
-        const categoriesData = await getCategories(supabase);
-        setCategories(categoriesData);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error loading categories:', error);
-        setError('Failed to load categories. Please try again.');
-        setIsLoading(false);
+    if (supabase) {
+      async function loadCategories() {
+        try {
+          const categoriesData = await getCategories(supabase);
+          setCategories(categoriesData);
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Error loading categories:', error);
+          setError('Failed to load categories. Please try again.');
+          setIsLoading(false);
+        }
       }
+      
+      loadCategories();
     }
-    
-    loadCategories();
   }, [supabase]);
 
   const conditions: ItemCondition[] = ['New', 'Like New', 'Good', 'Fair', 'Poor'];

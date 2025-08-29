@@ -15,7 +15,7 @@ export default function ClientWrapper({ children }: ClientWrapperProps) {
 
   // Only render children after client-side hydration is complete
   if (!isClient) {
-    return null;
+    return <div>Loading...</div>;
   }
 
   return <>{children}</>;

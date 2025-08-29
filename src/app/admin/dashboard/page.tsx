@@ -13,6 +13,10 @@ import {
   FaClock
 } from 'react-icons/fa';
 import Link from 'next/link';
+import SupabaseWrapper from '@/components/SupabaseWrapper';
+
+// Prevent this page from being pre-rendered during build
+export const dynamic = 'force-dynamic';
 
 interface DashboardStats {
   totalUsers: number;
@@ -68,7 +72,32 @@ const StatCard = ({ title, value, icon: Icon, color, href }: any) => {
   );
 };
 
+// Build-time safe component
+function AdminDashboardBuildSafe() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading Admin Dashboard...</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
+  // During build time, return the safe component
+  if (typeof window === 'undefined') {
+    return <AdminDashboardBuildSafe />;
+  }
+
+  return (
+    <SupabaseWrapper>
+      <AdminDashboardContent />
+    </SupabaseWrapper>
+  );
+}
+
+function AdminDashboardContent() {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalProducts: 0,
@@ -84,8 +113,10 @@ export default function AdminDashboard() {
   const { supabase } = useSupabase();
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (supabase) {
+      fetchDashboardData();
+    }
+  }, [supabase]);
 
   const fetchDashboardData = async () => {
     try {

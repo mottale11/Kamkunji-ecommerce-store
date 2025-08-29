@@ -19,6 +19,10 @@ import {
   FaClock
 } from 'react-icons/fa';
 import Link from 'next/link';
+import SupabaseWrapper from '@/components/SupabaseWrapper';
+
+// Prevent this page from being pre-rendered during build
+export const dynamic = 'force-dynamic';
 
 interface Product {
   id: string;
@@ -42,6 +46,14 @@ interface Product {
 }
 
 export default function ItemsPage() {
+  return (
+    <SupabaseWrapper>
+      <ItemsPageContent />
+    </SupabaseWrapper>
+  );
+}
+
+function ItemsPageContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +64,10 @@ export default function ItemsPage() {
   const { supabase } = useSupabase();
 
   useEffect(() => {
-    fetchProducts();
-  }, [statusFilter, sortBy, sortOrder]);
+    if (supabase) {
+      fetchProducts();
+    }
+  }, [supabase, statusFilter, sortBy, sortOrder]);
 
   const fetchProducts = async () => {
     try {
