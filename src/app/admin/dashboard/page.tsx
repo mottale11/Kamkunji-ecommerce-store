@@ -84,8 +84,14 @@ function AdminDashboardBuildSafe() {
 }
 
 export default function AdminDashboard() {
-  // During build time, return the safe component
-  if (typeof window === 'undefined') {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // During build time or before hydration, return the safe component
+  if (!isClient) {
     return <AdminDashboardBuildSafe />;
   }
 
