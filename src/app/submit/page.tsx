@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { FaUpload, FaTrash, FaSpinner, FaCamera, FaTag, FaMapMarkerAlt, FaPhone, FaInfoCircle } from 'react-icons/fa';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { getCategories } from '@/services/categories';
-import SupabaseWrapper from '@/components/SupabaseWrapper';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
@@ -24,11 +23,7 @@ interface FormData {
 }
 
 export default function SubmitItemPage() {
-  return (
-    <SupabaseWrapper>
-      <SubmitItemPageContent />
-    </SupabaseWrapper>
-  );
+  return <SubmitItemPageContent />;
 }
 
 function SubmitItemPageContent() {

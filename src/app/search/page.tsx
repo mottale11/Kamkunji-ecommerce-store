@@ -5,17 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
-import SupabaseWrapper from '@/components/SupabaseWrapper';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
 
 export default function SearchPage() {
-  return (
-    <SupabaseWrapper>
-      <SearchPageContent />
-    </SupabaseWrapper>
-  );
+  return <SearchPageContent />;
 }
 
 function SearchPageContent() {

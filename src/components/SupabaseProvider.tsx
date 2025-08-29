@@ -62,6 +62,12 @@ export default function SupabaseProvider({
     }
   }, [supabase]);
 
+  // During build time or SSR, render children without context
+  // This prevents the build from failing
+  if (typeof window === 'undefined') {
+    return <>{children}</>;
+  }
+
   // Show loading state while initializing
   if (isLoading) {
     return <div>Loading...</div>;

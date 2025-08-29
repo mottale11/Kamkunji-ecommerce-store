@@ -5,17 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { FaLock, FaUser, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
 import Link from 'next/link';
-import SupabaseWrapper from '@/components/SupabaseWrapper';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
 
 export default function AdminLoginPage() {
-  return (
-    <SupabaseWrapper>
-      <AdminLoginPageContent />
-    </SupabaseWrapper>
-  );
+  return <AdminLoginPageContent />;
 }
 
 function AdminLoginPageContent() {

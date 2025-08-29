@@ -13,7 +13,6 @@ import {
   FaClock
 } from 'react-icons/fa';
 import Link from 'next/link';
-import SupabaseWrapper from '@/components/SupabaseWrapper';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
@@ -90,11 +89,7 @@ export default function AdminDashboard() {
     return <AdminDashboardBuildSafe />;
   }
 
-  return (
-    <SupabaseWrapper>
-      <AdminDashboardContent />
-    </SupabaseWrapper>
-  );
+  return <AdminDashboardContent />;
 }
 
 function AdminDashboardContent() {

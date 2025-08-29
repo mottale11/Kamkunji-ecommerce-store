@@ -19,7 +19,6 @@ import {
   FaClock
 } from 'react-icons/fa';
 import Link from 'next/link';
-import SupabaseWrapper from '@/components/SupabaseWrapper';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
@@ -46,11 +45,7 @@ interface Product {
 }
 
 export default function ItemsPage() {
-  return (
-    <SupabaseWrapper>
-      <ItemsPageContent />
-    </SupabaseWrapper>
-  );
+  return <ItemsPageContent />;
 }
 
 function ItemsPageContent() {

@@ -6,7 +6,6 @@ import { PaymentService } from '@/services/payments';
 import { CartService, CartItem } from '@/services/cart';
 import { formatKSH } from '@/utils/currency';
 import { useSupabase } from '@/components/SupabaseProvider';
-import SupabaseWrapper from '@/components/SupabaseWrapper';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
@@ -32,11 +31,7 @@ interface PaymentResult {
 }
 
 export default function CheckoutPage() {
-  return (
-    <SupabaseWrapper>
-      <CheckoutPageContent />
-    </SupabaseWrapper>
-  );
+  return <CheckoutPageContent />;
 }
 
 function CheckoutPageContent() {
