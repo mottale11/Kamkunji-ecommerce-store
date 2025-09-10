@@ -1,17 +1,19 @@
 import { createServerComponentClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { FaArrowLeft, FaCheck, FaTruck, FaTimes, FaPrint, FaEnvelope, FaEdit } from 'react-icons/fa';
 import Link from 'next/link';
 
 // Reuse the Order and OrderItem interfaces from the orders page
 
 interface OrderDetailsPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
+  const { id } = await params;
   const supabase = createServerComponentClient({ cookies });
 
   // Fetch order details
@@ -22,7 +24,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
       order_items(*, product:products(*)),
       user:profiles(*)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   if (error || !order) {
@@ -55,7 +57,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
         updated_at: new Date().toISOString(),
         admin_notes: notes
       })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (!error) {
       // Send email notification
@@ -79,7 +81,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
       });
     }
 
-    redirect(`/admin/orders/${params.id}`);
+    redirect(`/admin/orders/${id}`);
   };
 
   const getStatusBadgeClass = (status: string) => {

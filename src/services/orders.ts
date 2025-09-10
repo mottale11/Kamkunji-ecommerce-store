@@ -1,4 +1,4 @@
-import { supabase } from '@/utils/supabase';
+import supabase from '@/utils/supabase';
 import { Database } from '@/types/database.types';
 
 type Order = Database['public']['Tables']['orders']['Row'] & {

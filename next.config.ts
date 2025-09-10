@@ -6,8 +6,7 @@ const nextConfig: NextConfig = {
   
   // Experimental features for better performance
   experimental: {
-    // Suppress hydration warnings
-    suppressHydrationWarning: true,
+    // Add experimental features here if needed
   },
   
   // Development optimizations

@@ -15,7 +15,7 @@ type Product = Database['public']['Tables']['products']['Row'] & {
   }>;
 };
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +26,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     const fetchProduct = async () => {
       try {
         setLoading(true);
+        const { id } = await params;
         const { data, error } = await supabase
           .from('products')
           .select(`
             *,
             product_images (*)
           `)
-          .eq('id', params.id)
+          .eq('id', id)
           .single();
 
         if (error) throw error;
@@ -47,10 +48,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       }
     };
 
-    if (params.id) {
-      fetchProduct();
-    }
-  }, [params.id, supabase]);
+    fetchProduct();
+  }, [params, supabase]);
 
   const handleSuccess = () => {
     router.push('/admin/products');

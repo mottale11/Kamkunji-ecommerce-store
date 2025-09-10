@@ -1,4 +1,4 @@
-import { supabase } from '@/utils/supabase';
+import supabase from '@/utils/supabase';
 import { Database } from '@/types/database.types';
 
 type WishlistItem = Database['public']['Tables']['wishlist']['Row'] & {

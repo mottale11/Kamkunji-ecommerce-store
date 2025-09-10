@@ -85,6 +85,11 @@ function ItemsPageContent() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      
+      if (!supabase) {
+        throw new Error('Database connection not available');
+      }
+      
       let query = supabase
         .from('products')
         .select(`
@@ -131,6 +136,10 @@ function ItemsPageContent() {
 
   const updateProductStatus = async (productId: string, newStatus: string) => {
     try {
+      if (!supabase) {
+        throw new Error('Database connection not available');
+      }
+      
       const { error } = await supabase
         .from('products')
         .update({ 
@@ -153,6 +162,10 @@ function ItemsPageContent() {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
+      if (!supabase) {
+        throw new Error('Database connection not available');
+      }
+      
       // First delete associated images
       const { error: imagesError } = await supabase
         .from('product_images')

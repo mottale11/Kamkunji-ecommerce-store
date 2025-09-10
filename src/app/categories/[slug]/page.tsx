@@ -6,15 +6,20 @@ import { useSupabase } from '@/components/SupabaseProvider';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 
-function CategoryPageContent({ params }: { params: { slug: string } }) {
+function CategoryPageContent({ params }: { params: Promise<{ slug: string }> }) {
   const { supabase } = useSupabase();
   const [category, setCategory] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [slug, setSlug] = useState<string>('');
   
   // Get the slug from params
-  const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  useEffect(() => {
+    params.then(({ slug }) => {
+      setSlug(Array.isArray(slug) ? slug[0] : slug);
+    });
+  }, [params]);
 
   useEffect(() => {
     async function fetchCategoryAndProducts() {
@@ -139,7 +144,7 @@ function CategoryPageContent({ params }: { params: { slug: string } }) {
   );
 }
 
-export default function CategoryPage({ params }: { params: { slug: string } }) {
+export default function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   return (
     <Suspense fallback={
       <div className="container mx-auto px-4 py-8">
