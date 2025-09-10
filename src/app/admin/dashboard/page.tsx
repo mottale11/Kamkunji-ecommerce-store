@@ -111,17 +111,31 @@ function AdminDashboardContent() {
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
-  const { supabase } = useSupabase();
+  
+  // Safely get Supabase client
+  let supabase = null;
+  try {
+    const supabaseContext = useSupabase();
+    supabase = supabaseContext.supabase;
+  } catch (err) {
+    console.warn('Supabase context not available:', err);
+  }
 
   useEffect(() => {
     if (supabase) {
       fetchDashboardData();
+    } else {
+      setLoading(false);
     }
   }, [supabase]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      if (!supabase) {
+        throw new Error('Database connection not available');
+      }
       
       // Fetch users count
       const { count: usersCount } = await supabase

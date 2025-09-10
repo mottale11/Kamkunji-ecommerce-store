@@ -14,7 +14,15 @@ interface ProductPageContentProps {
 }
 
 export default function ProductPageContent({ id }: ProductPageContentProps) {
-  const { supabase } = useSupabase();
+  // Safely get Supabase client
+  let supabase = null;
+  try {
+    const supabaseContext = useSupabase();
+    supabase = supabaseContext.supabase;
+  } catch (err) {
+    console.warn('Supabase context not available:', err);
+  }
+
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +35,11 @@ export default function ProductPageContent({ id }: ProductPageContentProps) {
     async function fetchProduct() {
       try {
         setLoading(true);
+        
+        if (!supabase) {
+          throw new Error('Database connection not available');
+        }
+
         const { data, error } = await supabase
           .from('products')
           .select('*, product_images(*), categories(*)')
@@ -46,8 +59,11 @@ export default function ProductPageContent({ id }: ProductPageContentProps) {
       }
     }
     
-    if (id) {
+    if (id && supabase) {
       fetchProduct();
+    } else if (id && !supabase) {
+      setError('Database connection not available. Please refresh the page.');
+      setLoading(false);
     }
   }, [id, supabase]);
 
