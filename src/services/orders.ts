@@ -1,180 +1,177 @@
-import { supabase } from '../utils/supabase';
-import { Database } from '../types/database.types';
+import { supabase } from '@/utils/supabase';
+import { Database } from '@/types/database.types';
 
-export type Order = Database['public']['Tables']['orders']['Row'];
-export type OrderItem = Database['public']['Tables']['order_items']['Row'];
-export type OrderWithItems = Order & { items: (OrderItem & { product: { name: string } })[] };
+type Order = Database['public']['Tables']['orders']['Row'] & {
+  order_items: Array<{
+    id: string;
+    product_id: string;
+    quantity: number;
+    price: number;
+    products: Database['public']['Tables']['products']['Row'] & {
+      product_images?: Array<{ url: string }>;
+    };
+  }>;
+  user?: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+};
 
-export async function getOrders({
-  user_id,
-  status,
-  limit = 10,
-  offset = 0,
-}: {
-  user_id?: string;
-  status?: 'pending' | 'processing' | 'completed' | 'cancelled' | 'all';
-  limit?: number;
-  offset?: number;
-} = {}) {
-  let query = supabase
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit)
-    .range(offset, offset + limit - 1);
+type CreateOrderData = {
+  userId: string;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+  }>;
+  shippingAddress: {
+    fullName: string;
+    address: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  paymentMethod: string;
+  itemsPrice: number;
+  shippingPrice: number;
+  taxPrice: number;
+  totalPrice: number;
+};
 
-  if (user_id) {
-    query = query.eq('user_id', user_id);
-  }
+export const createOrder = async (orderData: CreateOrderData): Promise<Order> => {
+  try {
+    const { data, error } = await supabase.rpc('create_order_with_items', {
+      p_user_id: orderData.userId,
+      p_items: orderData.items.map(item => ({
+        product_id: item.productId,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      p_shipping_address: orderData.shippingAddress,
+      p_payment_method: orderData.paymentMethod,
+      p_items_price: orderData.itemsPrice,
+      p_shipping_price: orderData.shippingPrice,
+      p_tax_price: orderData.taxPrice,
+      p_total_price: orderData.totalPrice
+    });
 
-  if (status && status !== 'all') {
-    query = query.eq('status', status);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching orders:', error);
-    throw error;
-  }
-
-  return data as Order[];
-}
-
-export async function getOrderById(id: string) {
-  // Get the order
-  const { data: order, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error('Error fetching order:', error);
-    throw error;
-  }
-
-  // Get the order items with product details
-  const { data: items, error: itemsError } = await supabase
-    .from('order_items')
-    .select('*, product:products(name)')
-    .eq('order_id', id);
-
-  if (itemsError) {
-    console.error('Error fetching order items:', itemsError);
-    throw itemsError;
-  }
-
-  return {
-    ...order,
-    items: items || [],
-  } as OrderWithItems;
-}
-
-export async function createOrder(
-  orderData: Database['public']['Tables']['orders']['Insert'],
-  orderItems: { product_id: string; quantity: number; price: number }[]
-) {
-  // Start a transaction
-  const { data: order, error } = await supabase
-    .from('orders')
-    .insert(orderData)
-    .select()
-    .single();
-
-  if (error) {
+    if (error) throw error;
+    return data as Order;
+  } catch (error) {
     console.error('Error creating order:', error);
     throw error;
   }
+};
 
-  // Insert order items
-  const itemsToInsert = orderItems.map(item => ({
-    order_id: order.id,
-    product_id: item.product_id,
-    quantity: item.quantity,
-    price: item.price,
-  }));
+export const getOrderById = async (orderId: string): Promise<Order | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items:order_items(
+          *,
+          products:product_id(*, product_images:product_images(*)) 
+        ),
+        user:user_id(id, full_name, email, phone)
+      `)
+      .eq('id', orderId)
+      .single();
 
-  const { error: itemsError } = await supabase
-    .from('order_items')
-    .insert(itemsToInsert);
+    if (error) {
+      if (error.code === 'PGRST116') { // No rows returned
+        return null;
+      }
+      throw error;
+    }
 
-  if (itemsError) {
-    console.error('Error adding order items:', itemsError);
-    throw itemsError;
-  }
-
-  return order as Order;
-}
-
-export async function updateOrderStatus(
-  id: string,
-  status: 'pending' | 'processing' | 'completed' | 'cancelled',
-  payment_status?: 'pending' | 'paid' | 'failed'
-) {
-  const updates: { status: string; payment_status?: string; updated_at: string } = {
-    status,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (payment_status) {
-    updates.payment_status = payment_status;
-  }
-
-  const { data, error } = await supabase
-    .from('orders')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating order status:', error);
+    return data as Order;
+  } catch (error) {
+    console.error(`Error fetching order ${orderId}:`, error);
     throw error;
   }
+};
 
-  return data as Order;
-}
+export const getUserOrders = async (userId: string): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items:order_items(
+          *,
+          products:product_id(*, product_images:product_images(*)) 
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-export async function getOrderStats() {
-  // Get count of orders by status
-  const { data: statusCounts, error: statusError } = await supabase
-    .from('orders')
-    .select('status, count')
-    .group('status');
-
-  if (statusError) {
-    console.error('Error fetching order status counts:', statusError);
-    throw statusError;
+    if (error) throw error;
+    return data as Order[];
+  } catch (error) {
+    console.error(`Error fetching orders for user ${userId}:`, error);
+    throw error;
   }
+};
 
-  // Get count of orders by payment status
-  const { data: paymentCounts, error: paymentError } = await supabase
-    .from('orders')
-    .select('payment_status, count')
-    .group('payment_status');
+export const updateOrderToPaid = async (orderId: string, paymentResult: any): Promise<Order> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        is_paid: true,
+        paid_at: new Date().toISOString(),
+        payment_result: paymentResult
+      })
+      .eq('id', orderId)
+      .select()
+      .single();
 
-  if (paymentError) {
-    console.error('Error fetching payment status counts:', paymentError);
-    throw paymentError;
+    if (error) throw error;
+    return data as Order;
+  } catch (error) {
+    console.error(`Error updating order ${orderId} to paid:`, error);
+    throw error;
   }
+};
 
-  // Get total revenue
-  const { data: revenue, error: revenueError } = await supabase
-    .from('orders')
-    .select('total_amount')
-    .eq('payment_status', 'paid');
+export const updateOrderToDelivered = async (orderId: string): Promise<Order> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        is_delivered: true,
+        delivered_at: new Date().toISOString()
+      })
+      .eq('id', orderId)
+      .select()
+      .single();
 
-  if (revenueError) {
-    console.error('Error fetching revenue:', revenueError);
-    throw revenueError;
+    if (error) throw error;
+    return data as Order;
+  } catch (error) {
+    console.error(`Error updating order ${orderId} to delivered:`, error);
+    throw error;
   }
+};
 
-  const totalRevenue = revenue.reduce((sum, order) => sum + Number(order.total_amount), 0);
+export const getOrders = async (): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items:order_items(*, products:product_id(*)),
+        user:user_id(id, full_name, email)
+      `)
+      .order('created_at', { ascending: false });
 
-  return {
-    statusCounts: statusCounts || [],
-    paymentCounts: paymentCounts || [],
-    totalRevenue,
-  };
-}
+    if (error) throw error;
+    return data as Order[];
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    throw error;
+  }
+};

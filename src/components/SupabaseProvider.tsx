@@ -1,10 +1,11 @@
 'use client';
 
-import { createBrowserClient } from '@supabase/ssr';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 type SupabaseContext = {
-  supabase: ReturnType<typeof createBrowserClient> | null;
+  supabase: ReturnType<typeof createClient> | null;
+  isLoading: boolean;
 };
 
 const Context = createContext<SupabaseContext | undefined>(undefined);
@@ -14,7 +15,7 @@ export default function SupabaseProvider({
 }: {
   children: ReactNode;
 }) {
-  const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserClient> | null>(null);
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -24,47 +25,18 @@ export default function SupabaseProvider({
       return;
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing required Supabase environment variables');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const client = createBrowserClient(
-        supabaseUrl,
-        supabaseAnonKey,
-        {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-          },
-        }
-      );
-      
+      const client = createClient();
       setSupabase(client);
     } catch (error) {
-      console.error('Error creating Supabase client:', error);
+      console.error('Error initializing Supabase client:', error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Don't render children until Supabase is initialized
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <Context.Provider value={{ supabase }}>
+    <Context.Provider value={{ supabase, isLoading }}>
       {children}
     </Context.Provider>
   );
@@ -72,10 +44,8 @@ export default function SupabaseProvider({
 
 export const useSupabase = () => {
   const context = useContext(Context);
-  
   if (context === undefined) {
     throw new Error('useSupabase must be used within a SupabaseProvider');
   }
-  
   return context;
 };

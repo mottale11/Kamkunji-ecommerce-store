@@ -287,3 +287,220 @@ export const getDashboardStats = async () => {
     recentOrders: recentOrders || [],
   };
 };
+
+type User = Database['public']['Tables']['profiles']['Row'];
+type Product = Database['public']['Tables']['products']['Row'];
+type Order = Database['public']['Tables']['orders']['Row'];
+
+export const getAdminStats = async () => {
+  try {
+    // Get counts for all important metrics
+    const [
+      { count: usersCount },
+      { count: productsCount },
+      { count: pendingProductsCount },
+      { count: ordersCount },
+      { count: pendingOrdersCount },
+      { data: revenueData },
+    ] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true }),
+      
+      supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved'),
+      
+      supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      
+      supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true }),
+      
+      supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      
+      supabase
+        .rpc('get_total_revenue')
+        .single(),
+    ]);
+
+    return {
+      usersCount: usersCount || 0,
+      productsCount: productsCount || 0,
+      pendingProductsCount: pendingProductsCount || 0,
+      ordersCount: ordersCount || 0,
+      pendingOrdersCount: pendingOrdersCount || 0,
+      totalRevenue: revenueData?.total_revenue || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    throw error;
+  }
+};
+
+export const getUsers = async (page = 1, limit = 10): Promise<{ data: User[]; count: number }> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const [{ data, count }, { count: total }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('created_at', { ascending: false }),
+      
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true }),
+    ]);
+
+    return {
+      data: data || [],
+      count: total || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    throw error;
+  }
+};
+
+export const updateUserRole = async (userId: string, isAdmin: boolean): Promise<User> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_admin: isAdmin })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Error updating user role for ${userId}:`, error);
+    throw error;
+  }
+};
+
+export const getPendingProducts = async (page = 1, limit = 10): Promise<{ data: Product[]; count: number }> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const [{ data, count }, { count: total }] = await Promise.all([
+      supabase
+        .from('products')
+        .select('*, user:user_id(id, full_name), categories:category_id(name)', { count: 'exact' })
+        .eq('status', 'pending')
+        .range(from, to)
+        .order('created_at', { ascending: false }),
+      
+      supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+    ]);
+
+    return {
+      data: data || [],
+      count: total || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching pending products:', error);
+    throw error;
+  }
+};
+
+export const updateProductStatus = async (
+  productId: string, 
+  status: 'pending' | 'approved' | 'rejected',
+  rejectionReason?: string
+): Promise<Product> => {
+  try {
+    const updates: any = { status };
+    
+    if (status === 'rejected' && rejectionReason) {
+      updates.rejection_reason = rejectionReason;
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Error updating product ${productId} status:`, error);
+    throw error;
+  }
+};
+
+export const getOrders = async (page = 1, limit = 10, status?: string): Promise<{ data: Order[]; count: number }> => {
+  try {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('orders')
+      .select('*, order_items(*, products:product_id(*)), user:user_id(id, full_name, email)', { count: 'exact' })
+      .range(from, to)
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const [{ data, count }, { count: total }] = await Promise.all([
+      query,
+      status
+        ? supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', status)
+        : supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true }),
+    ]);
+
+    return {
+      data: data || [],
+      count: total || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    throw error;
+  }
+};
+
+export const updateOrderStatus = async (
+  orderId: string, 
+  status: 'pending' | 'processing' | 'completed' | 'cancelled'
+): Promise<Order> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ 
+        status,
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Error updating order ${orderId} status:`, error);
+    throw error;
+  }
+};

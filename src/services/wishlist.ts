@@ -1,160 +1,111 @@
-import { supabase } from '../utils/supabase';
-import { Database } from '../types/database.types';
-import { ProductWithImages, getProductById } from './products';
+import { supabase } from '@/utils/supabase';
+import { Database } from '@/types/database.types';
 
-// First, let's create the wishlist table in Supabase if it doesn't exist
-export async function createWishlistTable() {
-  // This function would typically be run during initial setup
-  // For this implementation, we'll assume the table already exists or will be created via schema.sql
-  // In a real application, you might want to check if the table exists and create it if not
-}
+type WishlistItem = Database['public']['Tables']['wishlist']['Row'] & {
+  products: Database['public']['Tables']['products']['Row'] & {
+    product_images?: Array<{ url: string }>;
+    categories?: { name: string };
+  };
+};
+
+/**
+ * Get all products in a user's wishlist
+ */
+export const getWishlist = async (userId: string): Promise<WishlistItem[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('wishlist')
+      .select(`
+        *,
+        products:product_id (*,
+          product_images:product_images(*),
+          categories:category_id (name)
+        )
+      `)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return data as WishlistItem[];
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    throw error;
+  }
+};
 
 /**
  * Add a product to a user's wishlist
  */
-export async function addToWishlist(userId: string, productId: string): Promise<boolean> {
+export const addToWishlist = async (productId: string, userId: string) => {
   try {
-    // Check if the product is already in the wishlist
-    const { data: existing } = await supabase
+    // Check if item is already in wishlist
+    const { data: existingItem } = await supabase
       .from('wishlist')
       .select('*')
-      .eq('user_id', userId)
       .eq('product_id', productId)
+      .eq('user_id', userId)
       .single();
 
-    if (existing) {
-      // Already in wishlist
-      return true;
+    if (existingItem) {
+      return existingItem; // Already in wishlist
     }
 
     // Add to wishlist
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('wishlist')
-      .insert({
-        user_id: userId,
-        product_id: productId,
-      });
+      .insert([
+        { 
+          product_id: productId, 
+          user_id: userId 
+        }
+      ])
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Error adding to wishlist:', error);
-      return false;
-    }
-
-    return true;
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error adding to wishlist:', error);
-    return false;
+    throw error;
   }
-}
+};
 
 /**
  * Remove a product from a user's wishlist
  */
-export async function removeFromWishlist(userId: string, productId: string): Promise<boolean> {
+export const removeFromWishlist = async (wishlistItemId: string) => {
   try {
     const { error } = await supabase
       .from('wishlist')
       .delete()
-      .eq('user_id', userId)
-      .eq('product_id', productId);
+      .eq('id', wishlistItemId);
 
-    if (error) {
-      console.error('Error removing from wishlist:', error);
-      return false;
-    }
-
+    if (error) throw error;
     return true;
   } catch (error) {
     console.error('Error removing from wishlist:', error);
-    return false;
+    throw error;
   }
-}
+};
 
 /**
  * Check if a product is in a user's wishlist
  */
-export async function isInWishlist(userId: string, productId: string): Promise<boolean> {
+export const isInWishlist = async (productId: string, userId: string): Promise<boolean> => {
   try {
     const { data, error } = await supabase
       .from('wishlist')
-      .select('*')
-      .eq('user_id', userId)
+      .select('id')
       .eq('product_id', productId)
+      .eq('user_id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is the "no rows returned" error
-      console.error('Error checking wishlist:', error);
-      return false;
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw error;
     }
 
     return !!data;
   } catch (error) {
     console.error('Error checking wishlist:', error);
-    return false;
+    throw error;
   }
-}
-
-/**
- * Get all products in a user's wishlist
- */
-export async function getWishlist(userId: string): Promise<ProductWithImages[]> {
-  try {
-    const { data, error } = await supabase
-      .from('wishlist')
-      .select('product_id')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Error fetching wishlist:', error);
-      return [];
-    }
-
-    // Fetch the actual products
-    const productIds = data.map(item => item.product_id);
-    if (productIds.length === 0) {
-      return [];
-    }
-
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*, product_images(url)')
-      .in('id', productIds)
-      .eq('status', 'approved');
-
-    if (productsError) {
-      console.error('Error fetching wishlist products:', productsError);
-      return [];
-    }
-
-    // Transform the data to match the ProductWithImages type
-    return products.map((product: any) => ({
-      ...product,
-      images: product.product_images || [],
-    })) as ProductWithImages[];
-  } catch (error) {
-    console.error('Error fetching wishlist:', error);
-    return [];
-  }
-}
-
-/**
- * Get the count of products in a user's wishlist
- */
-export async function getWishlistCount(userId: string): Promise<number> {
-  try {
-    const { count, error } = await supabase
-      .from('wishlist')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Error fetching wishlist count:', error);
-      return 0;
-    }
-
-    return count || 0;
-  } catch (error) {
-    console.error('Error fetching wishlist count:', error);
-    return 0;
-  }
-}
+};

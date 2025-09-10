@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AdminAuthProvider, useAdminAuth } from '@/components/AdminAuthProvider';
 import { 
   FaTachometerAlt, 
@@ -20,6 +20,7 @@ import {
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { adminUser, isAdmin, loading, signOut } = useAdminAuth();
 
   // If we're on the login page, don't show the admin layout
@@ -48,16 +49,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   // Redirect to login if not authenticated as admin
-  if (!isAdmin) {
-    // Redirect to login page
-    if (typeof window !== 'undefined') {
-      window.location.href = '/admin/login';
-    }
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+  if (!isAdmin && typeof window !== 'undefined') {
+    router.push('/admin/login');
+    return null;
   }
 
   return (

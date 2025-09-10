@@ -68,3 +68,33 @@ export * from '@supabase/supabase-js';
 export { createClient };
 
 export default supabase;
+
+// New utility file to provide typed Supabase client
+import { createClient } from '../lib/supabase/client';
+
+export const typedSupabase = createClient();
+
+export type Tables = {
+  products: {
+    Row: {
+      id: string;
+      name: string;
+      price: number;
+      description: string;
+      condition: string;
+      location: string;
+      phone: string;
+      status: string;
+      created_at: string;
+      categories?: {
+        name: string;
+      };
+      product_images?: Array<{
+        url: string;
+      }>;
+    };
+  };
+  // Add other table types as needed
+};
+
+export type Product = Tables['products']['Row'];

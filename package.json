@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "check-types": "tsc --noEmit",
+    "type-check": "tsc --noEmit --incremental false",
+    "check-types": "tsc --noEmit --incremental false",
     "generate-favicon": "node scripts/generate-favicon.js"
   },
   "dependencies": {

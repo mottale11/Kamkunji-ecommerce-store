@@ -9,71 +9,45 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string
-          is_admin: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          is_admin?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          is_admin?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
       products: {
         Row: {
           id: string
-          name: string
-          description: string | null
-          price: number
-          category_id: string | null
-          stock_quantity: number
-          is_featured: boolean
-          condition: string
-          location: string | null
-          phone: string | null
-          status: string
           created_at: string
-          updated_at: string
+          name: string
+          price: number
+          description: string | null
+          condition: string
+          location: string
+          phone: string
+          status: string
+          user_id: string
+          category_id: string | null
         }
         Insert: {
           id?: string
-          name: string
-          description?: string | null
-          price: number
-          category_id?: string | null
-          stock_quantity?: number
-          is_featured?: boolean
-          condition?: string
-          location?: string | null
-          phone?: string | null
-          status?: string
           created_at?: string
-          updated_at?: string
+          name: string
+          price: number
+          description?: string | null
+          condition: string
+          location: string
+          phone: string
+          status?: string
+          user_id: string
+          category_id?: string | null
         }
         Update: {
           id?: string
-          name?: string
-          description?: string | null
-          price?: number
-          category_id?: string | null
-          stock_quantity?: number
-          is_featured?: boolean
-          condition?: string
-          location?: string | null
-          phone?: string | null
-          status?: string
           created_at?: string
-          updated_at?: string
+          name?: string
+          price?: number
+          description?: string | null
+          condition?: string
+          location?: string
+          phone?: string
+          status?: string
+          user_id?: string
+          category_id?: string | null
         }
       }
       product_images: {
@@ -81,22 +55,62 @@ export interface Database {
           id: string
           product_id: string
           url: string
-          is_primary: boolean
           created_at: string
         }
         Insert: {
           id?: string
           product_id: string
           url: string
-          is_primary?: boolean
           created_at?: string
         }
         Update: {
           id?: string
           product_id?: string
           url?: string
-          is_primary?: boolean
           created_at?: string
+        }
+      }
+      categories: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+      }
+      profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          avatar_url: string | null
+          is_admin: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          avatar_url?: string | null
+          is_admin?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          is_admin?: boolean
+          created_at?: string
+          updated_at?: string
         }
       }
       wishlist: {
@@ -116,26 +130,6 @@ export interface Database {
           id?: string
           user_id?: string
           product_id?: string
-          created_at?: string
-        }
-      }
-      categories: {
-        Row: {
-          id: string
-          name: string
-          icon: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          icon: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          icon?: string
           created_at?: string
         }
       }

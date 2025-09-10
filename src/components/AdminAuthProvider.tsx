@@ -23,123 +23,118 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { supabase } = useSupabase();
+  const { supabase, isLoading: isSupabaseLoading } = useSupabase();
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is already logged in as admin
+    if (isSupabaseLoading) return;
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    let authSubscription: { unsubscribe: () => void } | null = null;
+
     const checkAdminStatus = async () => {
+      if (!isMounted) return;
+      
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         
         if (authError) throw authError;
         
         if (user) {
-          // Check if user is an admin
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('is_admin, full_name')
             .eq('id', user.id)
             .single();
 
-          if (!error && profile?.is_admin) {
-            setAdminUser({
-              id: user.id,
-              email: user.email || '',
-              full_name: profile.full_name,
-            });
-            setIsAdmin(true);
-          } else {
-            // User exists but is not an admin, sign them out
-            await supabase.auth.signOut();
-            setAdminUser(null);
-            setIsAdmin(false);
-            if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
-              window.location.href = '/admin/login';
+          if (isMounted) {
+            if (!error && profile?.is_admin) {
+              setAdminUser({
+                id: user.id,
+                email: user.email || '',
+                full_name: profile.full_name,
+              });
+              setIsAdmin(true);
+            } else {
+              await supabase.auth.signOut();
+              setAdminUser(null);
+              setIsAdmin(false);
             }
           }
-        } else if (!window.location.pathname.includes('/admin/login')) {
-          window.location.href = '/admin/login';
+        } else if (isMounted) {
+          setAdminUser(null);
+          setIsAdmin(false);
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
-        setAdminUser(null);
-        setIsAdmin(false);
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
-          window.location.href = '/admin/login';
+        if (isMounted) {
+          setAdminUser(null);
+          setIsAdmin(false);
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     checkAdminStatus();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          // Check if user is an admin
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('is_admin, full_name')
-            .eq('id', session.user.id)
-            .single();
-
-          if (!error && profile?.is_admin) {
-            setAdminUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              full_name: profile.full_name,
-            });
-            setIsAdmin(true);
-          } else {
-            // User exists but is not an admin
-            await supabase.auth.signOut();
-            setAdminUser(null);
-            setIsAdmin(false);
-            router.push('/admin/login');
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setAdminUser(null);
-          setIsAdmin(false);
-          router.push('/admin/login');
-        }
+    // Set up auth state listener
+    const { data } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        await checkAdminStatus();
       }
-    );
+    });
+    
+    authSubscription = data;
 
-    return () => subscription.unsubscribe();
-  }, [supabase, router]);
+    return () => {
+      isMounted = false;
+      authSubscription?.unsubscribe();
+    };
+  }, [supabase, isSupabaseLoading]);
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
       setAdminUser(null);
       setIsAdmin(false);
-      router.push('/admin/login');
+      
+      if (typeof window !== 'undefined') {
+        window.location.href = '/admin/login';
+      }
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
-  const value = {
-    adminUser,
-    isAdmin,
-    loading,
-    signOut,
-  };
+  // Don't render children until we've checked auth state
+  if (loading || isSupabaseLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <AdminAuthContext.Provider value={value}>
+    <AdminAuthContext.Provider value={{ adminUser, isAdmin, loading, signOut }}>
       {children}
     </AdminAuthContext.Provider>
   );
 }
 
-export function useAdminAuth() {
+export const useAdminAuth = () => {
   const context = useContext(AdminAuthContext);
   if (context === undefined) {
     throw new Error('useAdminAuth must be used within an AdminAuthProvider');
   }
   return context;
-}
+};
