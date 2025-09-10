@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
   
-  // Fix workspace root warning
-  outputFileTracingRoot: process.cwd(),
+  // Fix path resolution
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   
   // Disable static generation
   trailingSlash: true,
@@ -14,6 +16,9 @@ const nextConfig = {
       bodySizeLimit: '2mb'
     },
   },
+  
+  // Server external packages
+  serverExternalPackages: ['@supabase/supabase-js'],
   
   // Disable static optimization
   generateBuildId: async () => {
@@ -31,25 +36,19 @@ const nextConfig = {
       },
     ],
   },
-  
+
   // Webpack configuration
   webpack: (config, { isServer }) => {
-    // Fixes npm packages that depend on `fs` module
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        os: false,
-      };
-    }
-    
-    // Fixes "Module not found: Can't resolve 'encoding'" error
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'encoding': false,
+    // Add path resolution for Windows
+    config.resolve = {
+      ...config.resolve,
+      alias: {
+        ...config.resolve.alias,
+        '@': path.resolve(__dirname, 'src'),
+      },
     };
-    
+
+    // Important: return the modified config
     return config;
   },
   
@@ -58,7 +57,7 @@ const nextConfig = {
   
   // Disable TypeScript type checking during build
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   
   // Disable ESLint during build
@@ -66,8 +65,20 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Server external packages
-  serverExternalPackages: ['@supabase/supabase-js']
+  // Enable CORS for development
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

@@ -55,14 +55,6 @@ function AdminLoginPageContent() {
   const router = useRouter();
   const { supabase } = useSupabase();
 
-  useEffect(() => {
-    // Clear any existing error/success messages when inputs change
-    if (error || success) {
-      setError(null);
-      setSuccess(null);
-    }
-  }, [email, password]);
-
   const validateForm = () => {
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address');
@@ -194,7 +186,13 @@ function AdminLoginPageContent() {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error || success) {
+                      setError(null);
+                      setSuccess(null);
+                    }
+                  }}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-3"
                   placeholder="you@example.com"
                   disabled={loading}
@@ -217,7 +215,13 @@ function AdminLoginPageContent() {
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error || success) {
+                      setError(null);
+                      setSuccess(null);
+                    }
+                  }}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md py-3"
                   placeholder="••••••••"
                   disabled={loading}
