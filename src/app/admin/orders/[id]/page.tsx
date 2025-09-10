@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { FaArrowLeft, FaCheck, FaTruck, FaTimes, FaPrint, FaEnvelope, FaEdit } from 'react-icons/fa';
@@ -14,11 +14,31 @@ interface OrderDetailsPageProps {
 
 export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const { id } = await params;
+  const cookieStore = cookies();
+  
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies,
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            // Handle the error if needed
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          } catch (error) {
+            // Handle the error if needed
+          }
+        },
+      },
     }
   );
 
@@ -53,11 +73,31 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
     const status = formData.get('status') as string;
     const notes = formData.get('notes') as string;
     
+    const cookieStore = cookies();
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookies,
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            try {
+              cookieStore.set({ name, value, ...options });
+            } catch (error) {
+              // Handle the error if needed
+            }
+          },
+          remove(name: string, options: CookieOptions) {
+            try {
+              cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+            } catch (error) {
+              // Handle the error if needed
+            }
+          },
+        },
       }
     );
     
