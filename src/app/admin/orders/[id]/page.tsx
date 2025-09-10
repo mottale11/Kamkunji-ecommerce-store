@@ -14,7 +14,6 @@ interface OrderDetailsPageProps {
 
 export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const { id } = await params;
-  const cookieStore = cookies();
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,10 +21,12 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
     {
       cookies: {
         get(name: string) {
+          const cookieStore = cookies();
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
+            const cookieStore = cookies();
             cookieStore.set({ name, value, ...options });
           } catch (error) {
             // Handle the error if needed
@@ -33,6 +34,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
         },
         remove(name: string, options: CookieOptions) {
           try {
+            const cookieStore = cookies();
             cookieStore.set({ name, value: '', ...options, maxAge: 0 });
           } catch (error) {
             // Handle the error if needed
@@ -73,18 +75,18 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
     const status = formData.get('status') as string;
     const notes = formData.get('notes') as string;
     
-    const cookieStore = cookies();
-    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
+            const cookieStore = cookies();
             return cookieStore.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
             try {
+              const cookieStore = cookies();
               cookieStore.set({ name, value, ...options });
             } catch (error) {
               // Handle the error if needed
@@ -92,6 +94,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
           },
           remove(name: string, options: CookieOptions) {
             try {
+              const cookieStore = cookies();
               cookieStore.set({ name, value: '', ...options, maxAge: 0 });
             } catch (error) {
               // Handle the error if needed
