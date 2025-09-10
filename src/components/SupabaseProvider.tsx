@@ -25,14 +25,29 @@ export default function SupabaseProvider({
       return;
     }
 
-    try {
-      const client = createClient();
-      setSupabase(client);
-    } catch (error) {
-      console.error('Error initializing Supabase client:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    const initializeSupabase = async () => {
+      try {
+        // Check if environment variables are available
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+          console.warn('Supabase environment variables not found');
+          setIsLoading(false);
+          return;
+        }
+
+        const client = createClient();
+        setSupabase(client);
+      } catch (error) {
+        console.error('Error initializing Supabase client:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Small delay to ensure environment variables are loaded
+    setTimeout(initializeSupabase, 50);
   }, []);
 
   return (

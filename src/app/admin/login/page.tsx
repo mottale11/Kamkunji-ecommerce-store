@@ -11,14 +11,35 @@ export const dynamic = 'force-dynamic';
 
 export default function AdminLoginPage() {
   const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
+  const [isSupabaseReady, setIsSupabaseReady] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Check if Supabase is available
+    const checkSupabase = () => {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        
+        if (supabaseUrl && supabaseAnonKey) {
+          setIsSupabaseReady(true);
+        } else {
+          console.warn('Supabase environment variables not found');
+          setIsSupabaseReady(true); // Still allow the page to load
+        }
+      } catch (error) {
+        console.error('Error checking Supabase:', error);
+        setIsSupabaseReady(true); // Still allow the page to load
+      }
+    };
+
+    // Small delay to ensure environment variables are loaded
+    setTimeout(checkSupabase, 100);
   }, []);
 
   // Show loading state until client-side hydration is complete
-  if (!isClient) {
+  if (!isClient || !isSupabaseReady) {
     return <LoginLoadingState />;
   }
 
@@ -53,7 +74,15 @@ function AdminLoginPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
-  const { supabase } = useSupabase();
+  
+  // Safely get Supabase client
+  let supabase = null;
+  try {
+    const supabaseContext = useSupabase();
+    supabase = supabaseContext.supabase;
+  } catch (err) {
+    console.warn('Supabase context not available:', err);
+  }
 
   const validateForm = () => {
     if (!email || !email.includes('@')) {
