@@ -1,4 +1,4 @@
-import { createServerComponentClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { FaArrowLeft, FaCheck, FaTruck, FaTimes, FaPrint, FaEnvelope, FaEdit } from 'react-icons/fa';
@@ -14,7 +14,13 @@ interface OrderDetailsPageProps {
 
 export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const { id } = await params;
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies,
+    }
+  );
 
   // Fetch order details
   const { data: order, error } = await supabase
@@ -47,7 +53,13 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
     const status = formData.get('status') as string;
     const notes = formData.get('notes') as string;
     
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies,
+      }
+    );
     
     // Update order status
     const { error } = await supabase

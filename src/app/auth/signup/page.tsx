@@ -47,7 +47,15 @@ function SignUpFormContent() {
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { supabase } = useSupabase();
+  
+  // Safely get Supabase client
+  let supabase = null;
+  try {
+    const supabaseContext = useSupabase();
+    supabase = supabaseContext.supabase;
+  } catch (err) {
+    console.warn('Supabase context not available:', err);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +68,10 @@ function SignUpFormContent() {
     setIsLoading(true);
     
     try {
+      if (!supabase) {
+        throw new Error('Authentication service is not available. Please try again later.');
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

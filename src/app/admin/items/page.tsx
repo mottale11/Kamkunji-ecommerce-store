@@ -210,7 +210,7 @@ function ItemsPageContent() {
     );
   };
 
-  const getPrimaryImage = (images: any[]) => {
+  const getPrimaryImage = (images: any[] | undefined) => {
     if (!images || images.length === 0) return null;
     const primaryImage = images.find(img => img.is_primary);
     return primaryImage?.url || images[0]?.url;

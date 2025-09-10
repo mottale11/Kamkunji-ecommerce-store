@@ -49,13 +49,25 @@ function SignInFormContent() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { supabase } = useSupabase();
+  
+  // Safely get Supabase client
+  let supabase = null;
+  try {
+    const supabaseContext = useSupabase();
+    supabase = supabaseContext.supabase;
+  } catch (err) {
+    console.warn('Supabase context not available:', err);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      if (!supabase) {
+        throw new Error('Authentication service is not available. Please try again later.');
+      }
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -74,6 +86,10 @@ function SignInFormContent() {
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
+      if (!supabase) {
+        throw new Error('Authentication service is not available. Please try again later.');
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

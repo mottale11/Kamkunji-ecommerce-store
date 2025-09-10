@@ -36,7 +36,16 @@ export default function CheckoutPage() {
 
 function CheckoutPageContent() {
   const router = useRouter();
-  const { supabase } = useSupabase();
+  
+  // Safely get Supabase client
+  let supabase = null;
+  try {
+    const supabaseContext = useSupabase();
+    supabase = supabaseContext.supabase;
+  } catch (err) {
+    console.warn('Supabase context not available:', err);
+  }
+  
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
@@ -58,6 +67,11 @@ function CheckoutPageContent() {
     const loadCartItems = async () => {
       try {
         setIsLoading(true);
+        
+        if (!supabase) {
+          throw new Error('Database connection not available');
+        }
+        
         const items = await CartService.getCartItemsWithDetails(supabase);
         setCartItems(items);
       } catch (error) {
@@ -68,8 +82,12 @@ function CheckoutPageContent() {
       }
     };
 
-    loadCartItems();
-  }, []);
+    if (supabase) {
+      loadCartItems();
+    } else {
+      setIsLoading(false);
+    }
+  }, [supabase]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
