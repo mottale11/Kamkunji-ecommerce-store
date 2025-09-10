@@ -19,58 +19,48 @@ export default function SupabaseProvider({
 
   useEffect(() => {
     // Only create the client on the client side
-    if (typeof window !== 'undefined') {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (supabaseUrl && supabaseAnonKey) {
-        try {
-          const client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-            auth: {
-              persistSession: true,
-              autoRefreshToken: true,
-              detectSessionInUrl: true,
-            },
-          });
-          setSupabase(client);
-        } catch (error) {
-          console.error('Error creating Supabase client:', error);
+    if (typeof window === 'undefined') {
+      setIsLoading(false);
+      return;
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing required Supabase environment variables');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const client = createBrowserClient(
+        supabaseUrl,
+        supabaseAnonKey,
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
         }
-      } else {
-        console.warn('Missing required Supabase environment variables');
-      }
+      );
+      
+      setSupabase(client);
+    } catch (error) {
+      console.error('Error creating Supabase client:', error);
+    } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    if (supabase) {
-      try {
-        const {
-          data: { subscription },
-        } = supabase.auth.onAuthStateChange(() => {
-          // Refresh the page on auth state change
-          // This is a simple approach - in a real app you might use more sophisticated state management
-        });
-
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Error setting up auth listener:', error);
-      }
-    }
-  }, [supabase]);
-
-  // During build time or SSR, render children without context
-  // This prevents the build from failing
-  if (typeof window === 'undefined') {
-    return <>{children}</>;
-  }
-
-  // Show loading state while initializing
+  // Don't render children until Supabase is initialized
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   return (
@@ -82,14 +72,10 @@ export default function SupabaseProvider({
 
 export const useSupabase = () => {
   const context = useContext(Context);
-
+  
   if (context === undefined) {
-    // During build time, return a mock context
-    if (typeof window === 'undefined') {
-      return { supabase: null };
-    }
-    throw new Error('useSupabase must be used inside SupabaseProvider');
+    throw new Error('useSupabase must be used within a SupabaseProvider');
   }
-
+  
   return context;
 };

@@ -49,7 +49,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   // Redirect to login if not authenticated as admin
   if (!isAdmin) {
-    return null; // Will be handled by the auth provider
+    // Redirect to login page
+    if (typeof window !== 'undefined') {
+      window.location.href = '/admin/login';
+    }
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   return (

@@ -30,7 +30,9 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     // Check if user is already logged in as admin
     const checkAdminStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) throw authError;
         
         if (user) {
           // Check if user is an admin
@@ -52,12 +54,20 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
             await supabase.auth.signOut();
             setAdminUser(null);
             setIsAdmin(false);
+            if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
+              window.location.href = '/admin/login';
+            }
           }
+        } else if (!window.location.pathname.includes('/admin/login')) {
+          window.location.href = '/admin/login';
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
         setAdminUser(null);
         setIsAdmin(false);
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
+          window.location.href = '/admin/login';
+        }
       } finally {
         setLoading(false);
       }
