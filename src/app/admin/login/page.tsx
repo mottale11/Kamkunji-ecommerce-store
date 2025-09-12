@@ -5,59 +5,46 @@ import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { FaLock, FaUser, FaEye, FaEyeSlash, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
 
-// Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
 
 export default function AdminLoginPage() {
-  const [isClient, setIsClient] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
     
-    // Check if Supabase is available
+    // Only run on client side
     const checkSupabase = async () => {
       try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        
-        if (!supabaseUrl || !supabaseAnonKey) {
-          const errorMsg = 'Missing Supabase environment variables. Please check your configuration.';
-          console.error(errorMsg);
-          setInitError(errorMsg);
-          setIsSupabaseReady(true); // Allow the page to render the error
-          return;
+        // Simple check for required environment variables
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || 
+            !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+          throw new Error('Missing required environment variables');
         }
-        
-        // Test the Supabase connection
-        const testClient = createClient(supabaseUrl, supabaseAnonKey);
-        await testClient.auth.getSession();
-        
         setIsSupabaseReady(true);
       } catch (error) {
-        const errorMsg = 'Failed to initialize Supabase. Please check your internet connection and try again.';
         console.error('Supabase initialization error:', error);
-        setInitError(errorMsg);
-        setIsSupabaseReady(true); // Allow the page to render the error
+        setInitError('Failed to initialize authentication service');
       }
     };
 
-    // Small delay to ensure environment variables are loaded
-    const timer = setTimeout(() => {
-      checkSupabase();
-    }, 100);
-
-    return () => clearTimeout(timer);
+    checkSupabase();
   }, []);
 
-  // Show loading state until client-side hydration is complete
-  if (!isClient || !isSupabaseReady) {
+  // Don't render anything during SSR or while checking Supabase
+  if (!mounted) {
+    return null;
+  }
+
+  // Show loading state
+  if (!isSupabaseReady && !initError) {
     return <LoginLoadingState />;
   }
 
+  // Show error state if initialization failed
   if (initError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center items-center px-4">
@@ -66,9 +53,9 @@ export default function AdminLoginPage() {
           <p className="text-gray-700 mb-6">{initError}</p>
           <button
             onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
           >
-            Retry
+            Try Again
           </button>
         </div>
       </div>
@@ -104,46 +91,27 @@ function AdminLoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
   
-  // Safely get Supabase client
-  let supabase = null;
-  try {
-    const supabaseContext = useSupabase();
-    supabase = supabaseContext.supabase;
-  } catch (err) {
-    console.warn('Supabase context not available:', err);
-  }
-
-  const validateForm = () => {
-    if (!email || !email.includes('@')) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (!password || password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return false;
-    }
-    return true;
-  };
+  const { supabase } = useSupabase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters long');
       return;
     }
 
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
-      if (!supabase) {
-        throw new Error('Authentication service is not available. Please try again later.');
-      }
-
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -152,7 +120,6 @@ function AdminLoginPageContent() {
       if (signInError) throw signInError;
 
       if (data?.user) {
-        // Check if user is an admin by looking up their profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('is_admin, full_name')
@@ -162,11 +129,9 @@ function AdminLoginPageContent() {
         if (profileError) throw profileError;
 
         if (profile?.is_admin) {
-          setSuccess('Login successful! Redirecting...');
-          // Force a page reload to ensure all auth state is properly set
-          window.location.href = '/admin/dashboard';
+          router.push('/admin/dashboard');
+          router.refresh();
         } else {
-          // User exists but is not an admin, sign them out
           await supabase.auth.signOut();
           setError('Access denied. Admin privileges required.');
         }
@@ -178,6 +143,7 @@ function AdminLoginPageContent() {
           ? 'Invalid email or password. Please try again.'
           : err.message || 'Failed to sign in. Please try again later.'
       );
+      setPassword('');
     } finally {
       setLoading(false);
     }
@@ -194,9 +160,6 @@ function AdminLoginPageContent() {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Admin Login
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in to access the admin dashboard
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -211,21 +174,6 @@ function AdminLoginPageContent() {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-red-700">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 bg-green-50 border-l-4 border-green-500 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-green-700">{success}</p>
                 </div>
               </div>
             </div>
@@ -247,13 +195,7 @@ function AdminLoginPageContent() {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (error || success) {
-                      setError(null);
-                      setSuccess(null);
-                    }
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-3"
                   placeholder="you@example.com"
                   disabled={loading}
@@ -276,13 +218,7 @@ function AdminLoginPageContent() {
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error || success) {
-                      setError(null);
-                      setSuccess(null);
-                    }
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md py-3"
                   placeholder="••••••••"
                   disabled={loading}
@@ -304,31 +240,13 @@ function AdminLoginPageContent() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                  Forgot your password?
-                </a>
-              </div>
-            </div>
-
             <div>
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  loading ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
                 {loading ? (
                   <>
