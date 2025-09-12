@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/components/SupabaseProvider';
 import { FaLock, FaUser, FaEye, FaEyeSlash, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 
 // Prevent this page from being pre-rendered during build
 export const dynamic = 'force-dynamic';
@@ -12,35 +13,66 @@ export const dynamic = 'force-dynamic';
 export default function AdminLoginPage() {
   const [isClient, setIsClient] = useState(false);
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
     
     // Check if Supabase is available
-    const checkSupabase = () => {
+    const checkSupabase = async () => {
       try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
         
-        if (supabaseUrl && supabaseAnonKey) {
-          setIsSupabaseReady(true);
-        } else {
-          console.warn('Supabase environment variables not found');
-          setIsSupabaseReady(true); // Still allow the page to load
+        if (!supabaseUrl || !supabaseAnonKey) {
+          const errorMsg = 'Missing Supabase environment variables. Please check your configuration.';
+          console.error(errorMsg);
+          setInitError(errorMsg);
+          setIsSupabaseReady(true); // Allow the page to render the error
+          return;
         }
+        
+        // Test the Supabase connection
+        const testClient = createClient(supabaseUrl, supabaseAnonKey);
+        await testClient.auth.getSession();
+        
+        setIsSupabaseReady(true);
       } catch (error) {
-        console.error('Error checking Supabase:', error);
-        setIsSupabaseReady(true); // Still allow the page to load
+        const errorMsg = 'Failed to initialize Supabase. Please check your internet connection and try again.';
+        console.error('Supabase initialization error:', error);
+        setInitError(errorMsg);
+        setIsSupabaseReady(true); // Allow the page to render the error
       }
     };
 
     // Small delay to ensure environment variables are loaded
-    setTimeout(checkSupabase, 100);
+    const timer = setTimeout(() => {
+      checkSupabase();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Show loading state until client-side hydration is complete
   if (!isClient || !isSupabaseReady) {
     return <LoginLoadingState />;
+  }
+
+  if (initError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center items-center px-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Initialization Error</h2>
+          <p className="text-gray-700 mb-6">{initError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return <AdminLoginPageContent />;
